@@ -1,0 +1,86 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Informações do usuário do sistema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "email": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["super_admin", "admin", "funcionario", "cliente"] }
+      },
+      "required": ["id", "nome", "email", "tipo"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Dados do funcionário/barbeiro",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "salario": { "type": "number" }
+      },
+      "required": ["id", "nome", "salario"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Serviços oferecidos pela barbearia",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "preco": { "type": "number" }
+      },
+      "required": ["id", "nome", "preco"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Registros de agendamentos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cliente_id": { "type": "string" },
+        "funcionario_id": { "type": "string" },
+        "servico": { "type": "string" },
+        "data": { "type": "string" },
+        "hora": { "type": "string" },
+        "status": { "type": "string", "enum": ["pendente", "em andamento", "concluído"] }
+      },
+      "required": ["id", "cliente_id", "funcionario_id", "servico", "data", "hora", "status"]
+    },
+    "AppConfig": {
+      "title": "AppConfig",
+      "description": "Configurações globais do sistema",
+      "type": "object",
+      "properties": {
+        "status": { "type": "string", "enum": ["ativo", "bloqueado"] },
+        "data_expiracao": { "type": "string" },
+        "metodos_pagamento": { "type": "array" }
+      },
+      "required": ["status", "data_expiracao", "metodos_pagamento"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "User",
+      "description": "Coleção de usuários"
+    },
+    "employees": {
+      "schema": "Employee",
+      "description": "Coleção de funcionários registrados pelo Admin"
+    },
+    "services": {
+      "schema": "Service",
+      "description": "Tabela de serviços e preços"
+    },
+    "appointments": {
+      "schema": "Appointment",
+      "description": "Lista de agendamentos diários"
+    },
+    "configuracoes": {
+      "schema": "AppConfig",
+      "description": "Configuração única do sistema"
+    }
+  }
+}
