@@ -61,11 +61,13 @@ export default function ClientDashboard() {
                <p className="text-xl font-bold text-white">Pronto para brilhar?</p>
             </div>
             <Dialog open={isBooking} onOpenChange={setIsBooking}>
-              <DialogTrigger asChild>
-                <Button className="gold-gradient text-black font-bold h-12 px-6 rounded-full shadow-lg shadow-gold/20">
-                  <Scissors className="w-4 h-4 mr-2" /> AGENDAR
-                </Button>
-              </DialogTrigger>
+              <DialogTrigger
+                render={
+                  <Button className="gold-gradient text-black font-bold h-12 px-6 rounded-full shadow-lg shadow-gold/20">
+                    <Scissors className="w-4 h-4 mr-2" /> AGENDAR
+                  </Button>
+                }
+              />
               <DialogContent className="bg-[#121212] border-border/50 text-white p-4 sm:p-6 w-[95%] rounded-2xl">
                 <DialogHeader>
                   <DialogTitle className="text-xl font-bold text-center gold-text">Novo Agendamento</DialogTitle>
@@ -123,28 +125,28 @@ export default function ClientDashboard() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 overflow-x-hidden">
-            {services.slice(0, 3).map((s, i) => (
+            {services.map((s, i) => (
               <motion.div 
                 key={s.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
               >
-                <Card className="bg-[#121212]/50 border-border/30 backdrop-blur-sm group hover:border-primary/50 transition-colors">
-                  <CardContent className="p-4 flex justify-between items-center">
-                    <div className="flex gap-4 items-center">
-                       <div className="w-12 h-12 bg-secondary/50 rounded-xl flex items-center justify-center text-primary border border-primary/20 group-hover:scale-110 transition-transform">
-                          <Scissors className="w-6 h-6" />
-                       </div>
-                       <div>
-                          <h3 className="font-bold text-lg">{s.nome}</h3>
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">35 - 45 MINUTOS</p>
-                       </div>
-                    </div>
-                    <div className="text-right">
-                       <p className="text-primary font-bold">KZ {s.preco.toLocaleString()}</p>
-                    </div>
-                  </CardContent>
+                <Card className="bg-[#121212]/50 border-border/30 backdrop-blur-sm group hover:border-primary/50 transition-colors overflow-hidden">
+                  <div className="flex">
+                    <img src={s.imagem} alt={s.nome} className="w-24 h-24 object-cover" />
+                    <CardContent className="p-4 flex flex-1 justify-between items-center">
+                      <div className="flex gap-4 items-center">
+                        <div>
+                            <h3 className="font-bold text-lg">{s.nome}</h3>
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">35 - 45 MINUTOS</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-primary font-bold">KZ {s.preco.toLocaleString()}</p>
+                      </div>
+                    </CardContent>
+                  </div>
                 </Card>
               </motion.div>
             ))}

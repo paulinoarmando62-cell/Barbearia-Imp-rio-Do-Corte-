@@ -1,9 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole, Employee, Service, Appointment, AppConfig, AppointmentStatus } from '../types';
+import { supabase, isSupabaseConfigured } from './supabase';
+import { supabaseService } from '../services/supabaseService';
 
 interface AppStore {
   user: User | null;
   setUser: (user: User | null) => void;
+  allUsers: User[];
+  setAllUsers: (users: User[]) => void;
   employees: Employee[];
   setEmployees: (employees: Employee[]) => void;
   services: Service[];
@@ -13,6 +17,7 @@ interface AppStore {
   config: AppConfig;
   setConfig: (config: AppConfig) => void;
   logout: () => void;
+  isLoading: boolean;
 }
 
 const initialConfig: AppConfig = {
@@ -22,71 +27,104 @@ const initialConfig: AppConfig = {
 };
 
 const initialServices: Service[] = [
-  { id: '1', nome: 'Corte Degradê', preco: 2500 },
-  { id: '2', nome: 'Barba Terapia', preco: 1500 },
-  { id: '3', nome: 'Pezinho e Sobrancelha', preco: 1000 },
-  { id: '4', nome: 'Corte + Barba', preco: 3500 },
-];
-
-const initialEmployees: Employee[] = [
-  { id: 'emp1', nome: 'Mestre Carlos', salario: 85000 },
-  { id: 'emp2', nome: 'Barbeiro Silva', salario: 70000 },
+  { id: '1', nome: 'Corte Degradê', preco: 2500, imagem: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400&q=80' },
+  { id: '2', nome: 'Barba Terapia', preco: 1500, imagem: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&q=80' },
+  { id: '3', nome: 'Pezinho e Sobrancelha', preco: 1000, imagem: 'https://images.unsplash.com/photo-1599351431202-1e0f0131899a?w=400&q=80' },
 ];
 
 const StoreContext = createContext<AppStore | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [services, setServices] = useState<Service[]>(initialServices);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [config, setConfig] = useState<AppConfig>(initialConfig);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [employees, setEmployees] = useState<Employee[]>(() => {
-    const saved = localStorage.getItem('employees');
-    return saved ? JSON.parse(saved) : initialEmployees;
-  });
-
-  const [services, setServices] = useState<Service[]>(() => {
-    const saved = localStorage.getItem('services');
-    return saved ? JSON.parse(saved) : initialServices;
-  });
-
-  const [appointments, setAppointments] = useState<Appointment[]>(() => {
-    const saved = localStorage.getItem('appointments');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [config, setConfig] = useState<AppConfig>(() => {
-    const saved = localStorage.getItem('config');
-    return saved ? JSON.parse(saved) : initialConfig;
-  });
-
+  // Initial Sync
   useEffect(() => {
-    localStorage.setItem('user', JSON.stringify(user));
-  }, [user]);
+    if (!isSupabaseConfigured) {
+      setIsLoading(false);
+      return;
+    }
 
-  useEffect(() => {
-    localStorage.setItem('employees', JSON.stringify(employees));
-  }, [employees]);
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const profile = await supabaseService.getProfile(session.user.id);
+        if (profile) setUser(profile);
+      } else {
+        setUser(null);
+      }
+    });
 
-  useEffect(() => {
-    localStorage.setItem('appointments', JSON.stringify(appointments));
-  }, [appointments]);
+    const initData = async () => {
+      setIsLoading(true);
+      try {
+        const [dbServices, dbEmployees, dbAppointments, dbConfig] = await Promise.all([
+          supabaseService.getServices(),
+          supabaseService.getEmployees(),
+          supabaseService.getAppointments(),
+          supabaseService.getConfig(),
+        ]);
 
-  useEffect(() => {
-    localStorage.setItem('config', JSON.stringify(config));
-  }, [config]);
+        if (dbServices.length > 0) setServices(dbServices);
+        if (dbEmployees.length > 0) setEmployees(dbEmployees);
+        if (dbAppointments.length > 0) setAppointments(dbAppointments);
+        if (dbConfig) setConfig(dbConfig);
+      } catch (err) {
+        console.error('Error loading Supabase data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const logout = () => setUser(null);
+    initData();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Setters with DB persistence
+  const updateServices = (newServices: Service[]) => {
+    setServices(newServices);
+    // Simple logic: if a service is new or changed, upsert it
+    newServices.forEach(s => supabaseService.upsertService(s));
+  };
+
+  const updateEmployees = (newEmployees: Employee[]) => {
+    setEmployees(newEmployees);
+    newEmployees.forEach(e => supabaseService.upsertEmployee(e));
+  };
+
+  const updateAppointments = (newAppointments: Appointment[]) => {
+    setAppointments(newAppointments);
+    // Logic for new appointments would go here
+  };
+
+  const updateConfig = (newConfig: AppConfig) => {
+    setConfig(newConfig);
+    supabaseService.updateConfig(newConfig);
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
 
   return (
     <StoreContext.Provider value={{
       user, setUser,
-      employees, setEmployees,
-      services, setServices,
-      appointments, setAppointments,
-      config, setConfig,
-      logout
+      allUsers, setAllUsers,
+      employees, setEmployees: updateEmployees,
+      services, setServices: updateServices,
+      appointments, setAppointments: updateAppointments,
+      config, setConfig: updateConfig,
+      logout,
+      isLoading
     }}>
       {children}
     </StoreContext.Provider>

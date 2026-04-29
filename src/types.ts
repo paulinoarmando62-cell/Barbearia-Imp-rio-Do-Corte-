@@ -28,6 +28,7 @@ export interface Service {
   id: string;
   nome: string;
   preco: number;
+  imagem?: string;
 }
 
 export interface Appointment {
